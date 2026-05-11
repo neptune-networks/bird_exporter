@@ -226,14 +226,12 @@ func parseLineForRouteChanges(c *context) {
 	x.Filtered = parseRouteChangeValue(match[5])
 	x.Ignored = parseRouteChangeValue(match[6])
 
-	if match[8] != "" {
-		// v3
+	if len(match[8]) > 0 { // v3 format
 		x.RxLimit = parseRouteChangeValue(match[7])
 		x.Limit = parseRouteChangeValue(match[8])
 		x.Accepted = parseRouteChangeValue(match[9])
 		c.current.RouteChangeFormatV3 = true
 	} else {
-		// v2 or older
 		x.Accepted = parseRouteChangeValue(match[7])
 	}
 }
