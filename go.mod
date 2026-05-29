@@ -4,6 +4,11 @@ go 1.24.3
 
 toolchain go1.24.9
 
+// Pinned to a Neptune Networks fork that fixes the truncated-reply bug
+// when a read chunk boundary lands inside a digit-bearing token.
+// https://github.com/czerwonk/bird_socket/issues/5
+replace github.com/czerwonk/bird_socket => github.com/neptune-networks/bird_socket v1.0.0-neptune.1
+
 require (
 	github.com/czerwonk/bird_socket v1.0.0
 	github.com/czerwonk/testutils v0.0.0-20170526233935-dd9dabe360d4
