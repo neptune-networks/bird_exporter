@@ -11,27 +11,32 @@ import (
 )
 
 var (
-	protocolRegex    *regexp.Regexp
-	descriptionRegex *regexp.Regexp
-	routeRegex       *regexp.Regexp
-	uptimeRegex      *regexp.Regexp
-	routeChangeRegex *regexp.Regexp
-	filterRegex      *regexp.Regexp
-	channelRegex     *regexp.Regexp
+	protocolRegex     *regexp.Regexp
+	descriptionRegex  *regexp.Regexp
+	routeRegex        *regexp.Regexp
+	receiveLimitRegex *regexp.Regexp
+	actionRegex       *regexp.Regexp
+	uptimeRegex       *regexp.Regexp
+	routeChangeRegex  *regexp.Regexp
+	filterRegex       *regexp.Regexp
+	channelRegex      *regexp.Regexp
 )
 
 type context struct {
-	current   *protocol.Protocol
-	line      string
-	handled   bool
-	protocols []*protocol.Protocol
-	ipVersion string
+	current                     *protocol.Protocol
+	line                        string
+	handled                     bool
+	expectingReceiveLimitAction bool
+	protocols                   []*protocol.Protocol
+	ipVersion                   string
 }
 
 func init() {
 	protocolRegex = regexp.MustCompile(`^(?:1002\-)?([^\s]+)\s+(MRT|BGP|BFD|OSPF|RPKI|RIP|RAdv|Pipe|Perf|Direct|Babel|Device|Kernel|Static)\s+([^\s]+)\s+([^\s]+)\s+(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}|[^\s]+)(?:\s+(.*?))?$`)
 	descriptionRegex = regexp.MustCompile(`Description:\s+(.*)`)
 	routeRegex = regexp.MustCompile(`^\s+Routes:\s+(\d+) imported, (?:(\d+) filtered, )?(\d+) exported(?:, (\d+) preferred)?`)
+	receiveLimitRegex = regexp.MustCompile(`^\s+Receive limit:\s+(\d+)`)
+	actionRegex = regexp.MustCompile(`^\s+Action:\s+(\S+)`)
 	uptimeRegex = regexp.MustCompile(`^(?:((\d+):(\d{2}):(\d{2}))|(\d+)|(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}))$`)
 	routeChangeRegex = regexp.MustCompile(`(Import|Export) (updates|withdraws):\s+(\d+|---)\s+(\d+|---)\s+(\d+|---)\s+(\d+|---)\s+(\d+|---)\s*`)
 	filterRegex = regexp.MustCompile(`(Input|Output) filter:\s+(.*)`)
@@ -50,6 +55,8 @@ func ParseProtocols(data []byte, ipVersion string) []*protocol.Protocol {
 		parseLineForProtocol,
 		parseLineForDescription,
 		parseLineForChannel,
+		parseLineForReceiveLimit,
+		parseLineForReceiveLimitAction,
 		parseLineForRoutes,
 		parseLineForRouteChanges,
 		parseLineForFilterName,
@@ -69,12 +76,43 @@ func ParseProtocols(data []byte, ipVersion string) []*protocol.Protocol {
 	return c.protocols
 }
 
+func parseLineForReceiveLimit(c *context) {
+	if c.current == nil {
+		return
+	}
+
+	match := receiveLimitRegex.FindStringSubmatch(c.line)
+	if match == nil {
+		return
+	}
+
+	c.current.ReceiveLimit, _ = strconv.ParseInt(match[1], 10, 64)
+	c.expectingReceiveLimitAction = true
+	c.handled = true
+}
+
+func parseLineForReceiveLimitAction(c *context) {
+	if c.current == nil || !c.expectingReceiveLimitAction {
+		return
+	}
+
+	match := actionRegex.FindStringSubmatch(c.line)
+	if match == nil {
+		return
+	}
+
+	c.current.ReceiveLimitAction = match[1]
+	c.expectingReceiveLimitAction = false
+	c.handled = true
+}
+
 func handleEmptyLine(c *context) {
 	if c.line != "" {
 		return
 	}
 
 	c.current = nil
+	c.expectingReceiveLimitAction = false
 	c.handled = true
 }
 
@@ -91,6 +129,7 @@ func parseLineForProtocol(c *context) {
 	c.current = protocol.NewProtocol(match[1], proto, c.ipVersion, ut)
 	c.current.Up = parseState(match[4])
 	c.current.State = match[6]
+	c.expectingReceiveLimitAction = false
 
 	c.protocols = append(c.protocols, c.current)
 	c.handled = true
@@ -182,6 +221,7 @@ func parseLineForChannel(c *context) {
 		c.protocols = append(c.protocols, c.current)
 	}
 
+	c.expectingReceiveLimitAction = false
 	c.handled = true
 }
 

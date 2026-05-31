@@ -130,6 +130,19 @@ func TestUpdateAndWithdrawCounts(t *testing.T) {
 	assert.Int64Equal("export withdraws accepted", 0, x.ExportWithdraws.Accepted, t)
 }
 
+func TestReceiveLimit(t *testing.T) {
+	data := "foo    BGP      ---        up     00:01:00  Established\n" +
+		"  Channel ipv4\n" +
+		"    Receive limit:  2\n" +
+		"      Action:       block\n" +
+		"    Routes:         1 imported, 1 filtered, 34 exported, 1 preferred\n"
+	p := ParseProtocols([]byte(data), "")
+	x := p[0]
+
+	assert.Int64Equal("receive limit", 2, x.ReceiveLimit, t)
+	assert.StringEqual("receive limit action", "block", x.ReceiveLimitAction, t)
+}
+
 func TestWithBird2(t *testing.T) {
 	data := "Name       Proto      Table      State  Since         Info\n" +
 		"bgp1       BGP        master     up     1494926415\n" +

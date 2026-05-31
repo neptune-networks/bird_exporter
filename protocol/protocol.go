@@ -15,23 +15,25 @@ const (
 type Proto int
 
 type Protocol struct {
-	Name            string
-	Description     string
-	IPVersion       string
-	ImportFilter    string
-	ExportFilter    string
-	Proto           Proto
-	Up              int
-	State           string
-	Imported        int64
-	Exported        int64
-	Filtered        int64
-	Preferred       int64
-	Uptime          int
-	ImportUpdates   RouteChangeCount
-	ImportWithdraws RouteChangeCount
-	ExportUpdates   RouteChangeCount
-	ExportWithdraws RouteChangeCount
+	Name               string
+	Description        string
+	IPVersion          string
+	ImportFilter       string
+	ExportFilter       string
+	Proto              Proto
+	Up                 int
+	State              string
+	Imported           int64
+	Exported           int64
+	Filtered           int64
+	Preferred          int64
+	ReceiveLimit       int64
+	ReceiveLimitAction string
+	Uptime             int
+	ImportUpdates      RouteChangeCount
+	ImportWithdraws    RouteChangeCount
+	ExportUpdates      RouteChangeCount
+	ExportWithdraws    RouteChangeCount
 }
 
 type RouteChangeCount struct {
